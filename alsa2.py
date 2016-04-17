@@ -17,6 +17,8 @@ def show(size, color):
 		color -= 1.0
 	if size < .08:
 		size = .08
+	if size > 1.0:
+		size = 1.0
 	'''
 	buffer = []
 	dead = []
@@ -48,9 +50,10 @@ skip = False
 pause = False
 startHue = 0.5
 prev = 0
-history = [0.0, 1.0]
+maxVol = 1
 prevHue = startHue
 Hue = 0.0
+history = [0, 0]
 
 def queueThread():
 	global queue
@@ -122,13 +125,13 @@ while True:
 	else:
 		fft = rfft(both)
 
-	hue = 1.0 * np.argmax(fft) / len(fft)
+	#hue = 1.0 * np.argmax(fft) / len(fft)
 	if np.argmax(fft) != 0:
 		hue = 1.0 * np.log10(np.argmax(fft)) / np.log10(len(fft))
 	else:
 		hue = 0.0
 	hue += startHue
-	hue = prevHue + (hue - prevHue) * np.absolute(hue - prevHue)
+	hue = prevHue + (hue - prevHue) * np.absolute(hue - prevHue) * 0.5
 	prevHue = hue
 	
 	'''
@@ -138,16 +141,19 @@ while True:
 	clean = irfft(fft)
 	'''
 
-	cur = 20 * (np.average(np.absolute(both)))
-	if cur < 0:
-		cur = 0
+	cur = (np.average(np.absolute(both)))
+	if cur <= 0:
+		cur = 1
 
-	history.append(cur)
-	if len(history) > 44100 / chunk:
-		history.pop(0)
-	
-	showVal = 1.0 * (cur - min(history)) / (max(history) - min(history)) if max(history) != min(history) else 0.0
-	prev = prev + (showVal - prev) * .4 if showVal > prev else prev - (prev - showVal) * .1
-	show(prev, hue)
+	cur = np.log10(cur) ** 2
+	#print(cur)
+	maxVol = max(maxVol, cur)
+	showVal = cur / maxVol
+	showVal = (showVal - 0.6) * 3
+	prev = prev + (showVal - prev) * 1 if showVal > prev else prev - (prev - showVal) * .15
+	#show(prev, hue)
+	show(history[0], history[1])
+	history = [prev, hue]
+	#print(showVal)
 	time.sleep(chunk / 44100.0)
 print "escaped analysis loop"
