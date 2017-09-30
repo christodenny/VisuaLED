@@ -6,7 +6,38 @@ from scipy.fftpack import rfft, irfft
 import sys
 import time
 import thread
-from display import *
+from bibliopixel.led import *
+from bibliopixel.drivers.APA102 import *
+
+driver = DriverAPA102(60, use_py_spi = True, c_order = ChannelOrder.BGR, SPISpeed = 16)
+led = LEDStrip(driver, masterBrightness = 128)
+
+def show(size, color):
+	while color > 1.0:
+		color -= 1.0
+	if size < .08:
+		size = .08
+	'''
+	buffer = []
+	dead = []
+	tuple = (0, 0, 255)
+	count = 0
+	lit = size * 30
+	while count < lit:
+		buffer += tuple
+		count += 1
+	while count < 30:
+		dead += (0,0,0)
+		count += 1
+	buffer = dead + buffer + buffer + dead
+	led.setBuffer(buffer)
+	'''
+	filled = 60 * size
+	dead = 60 - filled
+	led.fillHSV((0,0,0), 0, int(dead / 2))
+	led.fillHSV((int(color * 255), 255, 255), int(dead / 2), int(60 - dead / 2))
+	led.fillHSV((0,0,0), int(60 - dead / 2), 60)
+	led.update()
 
 queue = []
 data = ""
@@ -17,11 +48,9 @@ skip = False
 pause = False
 startHue = 0.5
 prev = 0
-maxVol = 1
+history = [0.0, 1.0]
 prevHue = startHue
 Hue = 0.0
-history = [0, 0]
-minmax = [0, 1]
 
 def queueThread():
 	global queue
@@ -61,7 +90,6 @@ def songThread():
 		song = decoder.open(curSong)
 		stream.setperiodsize(chunk)
 		data = song.readframes(chunk)
-		print data
 		while data != '':
 			while pause:
 				time.sleep(.1)
@@ -94,13 +122,13 @@ while True:
 	else:
 		fft = rfft(both)
 
-	#hue = 1.0 * np.argmax(fft) / len(fft)
+	hue = 1.0 * np.argmax(fft) / len(fft)
 	if np.argmax(fft) != 0:
 		hue = 1.0 * np.log10(np.argmax(fft)) / np.log10(len(fft))
 	else:
 		hue = 0.0
 	hue += startHue
-	hue = prevHue + (hue - prevHue) * np.absolute(hue - prevHue) * 0.5
+	hue = prevHue + (hue - prevHue) * np.absolute(hue - prevHue)
 	prevHue = hue
 	
 	'''
@@ -110,24 +138,16 @@ while True:
 	clean = irfft(fft)
 	'''
 
-	cur = (np.average(np.absolute(both)))
-	if cur <= 0:
-		cur = 1
+	cur = 20 * (np.average(np.absolute(both)))
+	if cur < 0:
+		cur = 0
 
-	cur = np.log10(cur) ** 2
-
-	minmax.append(cur)
-
-	if len(minmax) > 70:#44100 / chunk:
-		minmax.pop(0)
-
-	minVol = min(minmax)
-	maxVol = max(max(minmax), 1)
-	showVal = (cur - minVol) / (maxVol - minVol)
-	prev = prev + (showVal - prev) * 1 if showVal > prev else prev - (prev - showVal) * .15
-	#show(prev, hue)
-	show(history[0], history[1])
-	history = [prev, hue]
-	#print(showVal)
+	history.append(cur)
+	if len(history) > 44100 / chunk:
+		history.pop(0)
+	
+	showVal = 1.0 * (cur - min(history)) / (max(history) - min(history)) if max(history) != min(history) else 0.0
+	prev = prev + (showVal - prev) * .4 if showVal > prev else prev - (prev - showVal) * .1
+	show(prev, hue)
 	time.sleep(chunk / 44100.0)
 print "escaped analysis loop"
