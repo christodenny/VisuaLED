@@ -2,7 +2,8 @@ from bibliopixel.led import *
 from bibliopixel.drivers.APA102 import *
 
 driver = DriverAPA102(60, use_py_spi = True, c_order = ChannelOrder.BGR, SPISpeed = 16)
-led = LEDStrip(driver, masterBrightness = 128)
+#led = LEDStrip(driver, masterBrightness = 128)
+led = LEDStrip(driver, masterBrightness = 32)
 
 def show(size, color):
 	while color > 1.0:

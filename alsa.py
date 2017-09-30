@@ -37,7 +37,7 @@ def songThread():
 
 	while True:
 		data = list(inStream.read())[1]
-		#outStream.write(data)
+		outStream.write(data)
 	print "escaped songThread loop"
 
 
