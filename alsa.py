@@ -74,9 +74,11 @@ while True:
 	if len(minmax) > 70:#44100 / chunk:
 		minmax.pop(0)
 
-	minVol = min(min(minmax), 0.5)
-	minVol = min(minmax)
-	maxVol = max(max(minmax), 1)
+    # change minClip for lower bound on noise threshold
+    minClip = 5
+    maxClip = 6
+	minVol = min(min(minmax), minClip)
+	maxVol = max(max(minmax), maxClip)
 	showVal = (cur - minVol) / (maxVol - minVol)
 	prev = prev + (showVal - prev) * 0.7 if showVal > prev else prev - (prev - showVal) * .15
 	#show(prev, hue)
