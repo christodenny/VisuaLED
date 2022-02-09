@@ -11,7 +11,7 @@ import time
 
 chunk = 1024
 max_vol = 2.0**15
-led_size = 44
+led_size = 60
 mid = led_size // 2
 num_mel_bands = led_size // 2
 freq_granularity = 5
@@ -43,8 +43,12 @@ with neopixel.NeoPixel(board.D21, 60, auto_write=False) as pixels:
     raw = np.frombuffer(data, dtype=np.int16)
     sound = [int(raw[i * 2]) + int(raw[i * 2 + 1]) for i in range(len(raw) // 2)]
     sound = [x / max_vol for x in sound]
+
+    if len(sound) < chunk:
+      print('empty sound sample')
+      continue
     
-    print(sum(sound))
+    #print(sum(sound))
   
     fft = rfft(sound)
     # fft with chunk # of buckets from (44100/chunk)hz to 22khz
@@ -94,7 +98,7 @@ with neopixel.NeoPixel(board.D21, 60, auto_write=False) as pixels:
 
       rgb = colorsys.hsv_to_rgb(hue, 1, 1)
       rgb = tuple([int(256 * x * disp) for x in rgb])
-      pixels[mid + i + 16] = rgb
-      pixels[mid - i - 1 + 16] = rgb
+      pixels[mid + i] = rgb
+      pixels[mid - i - 1] = rgb
     hue = (hue + 0.0005) % 1.0
     pixels.show()
